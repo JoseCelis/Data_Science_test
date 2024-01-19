@@ -1,0 +1,26 @@
+import:
+  input: &import_input
+    path: 'data/raw_data/'
+    file_name: 'data-set.csv'
+
+eda:
+  input: *import_input
+  output:
+    path: 'EDA/analysis/'
+    report: 'report.txt'
+
+preprocess:
+  drop_columns: ['subscriber']
+  target_column: &target_column 'product02'
+  target_map: {'Ja': 1, 'Nee': 0}
+  input: *import_input
+  output: &preprocess_output
+    path: 'data/preprocessed/'
+    file_name: 'data.parquet'
+
+model:
+  target_column: *target_column
+  input: *preprocess_output
+  output:
+    path: 'data/model/'
+    file_name: 'analysis.csv'
