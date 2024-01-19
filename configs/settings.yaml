@@ -1,0 +1,18 @@
+import:
+  input: &import_input
+    path: 'data/raw_data/'
+    file_name: 'data-set.csv'
+
+eda:
+  input: *import_input
+  output:
+    path: 'EDA/analysis/'
+    report: 'report.txt'
+
+
+preprocess:
+  drop_columns: ['subscriber']
+  input: *import_input
+  output:
+    path: 'data/preprocessed/'
+    file_name: 'data.parquet'
