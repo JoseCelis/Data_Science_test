@@ -1,36 +1,70 @@
-# This is a basic workflow to help you get started with Actions
+name: CI/CD
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  build-docker:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    env:
+      CI_REGISTRY_IMAGE: *****.dkr.ecr.eu-west-1.amazonaws.com/****
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Install dependencies
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          pip install pipenv
+          pipenv install --dev
+
+      - name: Build Docker image
+        run: |
+          mkdir -p /kaniko/.docker
+          echo $CI_REGISTRY_IMAGE
+          echo $GITHUB_REF
+          echo $GITHUB_SHA
+          echo "{\"credsStore\":\"ecr-login\"}" > /kaniko/.docker/config.json
+          if [[ -n "$GITHUB_REF" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            TAG=$(echo $GITHUB_REF | sed 's/refs\/heads\///')
+          elif [[ -n "$GITHUB_REF" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TAG="latest"
+          elif [[ -n "$GITHUB_REF" && "$GITHUB_REF" =~ "refs/tags/" ]]; then
+            TAG=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
+          fi
+          /kaniko/executor --context $GITHUB_WORKSPACE --dockerfile $GITHUB_WORKSPACE/Dockerfile --destination $CI_REGISTRY_IMAGE:$TAG --build-arg=CI_DEPLOY_USER --build-arg=CI_DEPLOY_PASSWORD
+
+      - name: Push Docker image
+        run: docker push $CI_REGISTRY_IMAGE:$TAG
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+
+  compute:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI:
+      MLFLOW_TRACKING_USERNAME: 
+      MLFLOW_TRACKING_PASSWORD:
+      PYCARET_CUSTOM_LOGGING_LEVEL: CRITICAL
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+
+      - name: Run App
+        run: |
+          cd /project
+          pipenv run python main_scriipt.py
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
