@@ -9,10 +9,15 @@ eda:
     path: 'EDA/analysis/'
     report: 'report.txt'
 
-
 preprocess:
   drop_columns: ['subscriber']
+  target_column: &target_column 'product02'
+  target_map: {'Ja': 1, 'Nee': 0}
   input: *import_input
-  output:
+  output: &preprocess_output
     path: 'data/preprocessed/'
     file_name: 'data.parquet'
+
+model:
+  target_column: *target_column
+  input: *preprocess_output

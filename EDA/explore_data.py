@@ -1,9 +1,9 @@
 import os
+import sys
 import logging
-import numpy as np
 import pandas as pd
-import scipy.stats as stats
-import plotly.express as px
+
+sys.path.append(os.getcwd())
 from src.utils import read_config
 
 pd.set_option('display.max_columns', None)
@@ -40,14 +40,16 @@ def check_possible_options(data, report):
     text += f'length of data file after dropping rows with null values {len(data.dropna(axis=0))}\n'
     text += f'initial distributon of the target variable \n{data["product02"].value_counts()}\n'
     text += (f'distributon of the target variable after dropping rows wth null values \n'
-             f'{data.dropna(axis=0)["product02"].value_counts()}\n\n')
+             f'{data.dropna(axis=0)["product02"].value_counts()}\n')
+    text += str(data.dropna(axis=0).describe(include='all'))
     report.write(text)
     return None
 
 
 def main():
     config = read_config(['eda'])
-    data = pd.read_csv(os.path.join(config['input']['path'], config['input']['file_name']))
+    input_file = os.path.join(config['input']['path'], config['input']['file_name'])
+    data = pd.read_csv(input_file)
     os.makedirs(config['output']['path'], exist_ok=True)
     report_file = os.path.join(config["output"]["path"], config["output"]["report"])
 
