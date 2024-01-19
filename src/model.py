@@ -43,23 +43,20 @@ def train_model(experiment, train_data, test_data, target_col, numerical_columns
     return tuned_model
 
 
-def evaluate_metrics(data, target_col, output_file, name=''):
+def evaluate_metrics(data, target_col, output_path, name=''):
     """
     Calculate metrics
     :param data:
     :return:
     """
-    print(f'Accuracy score for {name}:\n',
-          accuracy_score(y_true=data[target_col],
-                         y_pred=data['prediction_label']))
-    print(f'Classification report for {name} results:\n',
-          classification_report(y_true=data[target_col],
-                                y_pred=data['prediction_label']))
-    cm = confusion_matrix(y_true=data[target_col],
-                          y_pred=data['prediction_label'])
+    score = accuracy_score(y_true=data[target_col], y_pred=data['prediction_label'])
+    print(f'Accuracy score for {name}:\n', score)
+    report = classification_report(y_true=data[target_col], y_pred=data['prediction_label'])
+    print(f'Classification report for {name} results:\n', report)
+    cm = confusion_matrix(y_true=data[target_col],y_pred=data['prediction_label'])
     disp_cm = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp_cm.plot()
-    plt.savefig(output_file)
+    plt.savefig(os.path.join(output_path, f'{name}_results.png'))
     return None
 
 
@@ -84,8 +81,8 @@ def main():
     predicted_target_test = experiment.predict_model(tuned_model, data=test_data)
 
     os.makedirs(output_path, exist_ok=True)
-    evaluate_metrics(predicted_target_train, target_col, os.path.join(output_path, 'train_results.png'), name='train')
-    evaluate_metrics(predicted_target_test, target_col, os.path.join(output_path, 'test_results.png'), name='train')
+    evaluate_metrics(predicted_target_train, target_col, output_path, name='train')
+    evaluate_metrics(predicted_target_test, target_col, output_path, name='test')
 
 
 if __name__ == '__main__':
