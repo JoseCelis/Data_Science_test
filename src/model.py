@@ -4,6 +4,7 @@ import mlflow
 import logging
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.metrics import log_loss
 from dotenv import load_dotenv, find_dotenv
 from sklearn.model_selection import train_test_split
@@ -37,14 +38,35 @@ def train_model(experiment, train_data, test_data, target_col, numerical_columns
                      feature_selection=False,
                      fold=5,
                      verbose=False)
-    catboost_model = experiment.create_model('catboost')
-    tuned_model = experiment.tune_model(catboost_model, search_library='optuna', search_algorithm='tpe')
+    boost_model = experiment.create_model('catboost')
+    tuned_model = experiment.tune_model(boost_model, search_library='optuna', search_algorithm='tpe')
     return tuned_model
+
+
+def evaluate_metrics(data, target_col, output_file, name=''):
+    """
+    Calculate metrics
+    :param data:
+    :return:
+    """
+    print(f'Accuracy score for {name}:\n',
+          accuracy_score(y_true=data[target_col],
+                         y_pred=data['prediction_label']))
+    print(f'Classification report for {name} results:\n',
+          classification_report(y_true=data[target_col],
+                                y_pred=data['prediction_label']))
+    cm = confusion_matrix(y_true=data[target_col],
+                          y_pred=data['prediction_label'])
+    disp_cm = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp_cm.plot()
+    plt.savefig(output_file)
+    return None
 
 
 def main():
     config = read_config(['model'])
     input_file = os.path.join(config['input']['path'], config['input']['file_name'])
+    output_path = config['output']['path']
     data = pd.read_parquet(input_file)
 
     # set mlflow tracking uri
@@ -58,8 +80,12 @@ def main():
     experiment = ClassificationExperiment()
     tuned_model = train_model(experiment, train_data, test_data, target_col, numerical_columns, categorical_columns)
     experiment.save_model(tuned_model, f'tuned_model')
-    predicted_target = experiment.predict_model(tuned_model, data=test_data)
-    print(predicted_target)
+    predicted_target_train = experiment.predict_model(tuned_model, data=train_data)
+    predicted_target_test = experiment.predict_model(tuned_model, data=test_data)
+
+    os.makedirs(output_path, exist_ok=True)
+    evaluate_metrics(predicted_target_train, target_col, os.path.join(output_path, 'train_results.png'), name='train')
+    evaluate_metrics(predicted_target_test, target_col, os.path.join(output_path, 'test_results.png'), name='train')
 
 
 if __name__ == '__main__':

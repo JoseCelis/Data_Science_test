@@ -21,3 +21,6 @@ preprocess:
 model:
   target_column: *target_column
   input: *preprocess_output
+  output:
+    path: 'data/model/'
+    file_name: 'analysis.csv'
